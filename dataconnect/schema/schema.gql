@@ -1,0 +1,29 @@
+type User @table {
+  displayName: String!
+  createdAt: Timestamp!
+  email: String
+  photoUrl: String
+}
+
+type Category @table {
+  name: String!
+  createdAt: Timestamp!
+  user: User!
+}
+
+type Task @table {
+  title: String!
+  isCompleted: Boolean!
+  createdAt: Timestamp!
+  description: String
+  dueDate: Date
+  user: User!
+  category: Category
+}
+
+type SharedTask @table {
+  canEdit: Boolean!
+  createdAt: Timestamp!
+  task: Task!
+  sharedWithUser: User!
+}

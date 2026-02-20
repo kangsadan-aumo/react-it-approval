@@ -25,13 +25,15 @@ import type { PurchaseRequest, CreateRequestInput, RequestStatus } from '../type
 
 // ⚠️ ใส่ Firebase config ของคุณที่นี่
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyBjrjJe5wTgmtKGRIsWRW6jF2-hhtixAlc",
+    authDomain: "it-approval-2a29a.firebaseapp.com",
+    projectId: "it-approval-2a29a",
+    storageBucket: "it-approval-2a29a.firebasestorage.app",
+    messagingSenderId: "40833821595",
+    appId: "1:40833821595:web:3954d7e3c6bea824b18f3e",
+    measurementId: "G-HR1773KVLK"
 };
+
 
 // ตรวจว่ายังเป็น placeholder หรือไม่
 const IS_DEMO_MODE = firebaseConfig.apiKey === "YOUR_API_KEY";
@@ -208,6 +210,9 @@ export function subscribeToRequests(callback: (requests: PurchaseRequest[]) => v
     return onSnapshot(q, (snapshot) => {
         const requests = snapshot.docs.map((d) => docToPurchaseRequest(d.id, d.data() as Record<string, unknown>));
         callback(requests);
+    }, (error) => {
+        console.error("Firebase subscription error:", error);
+        // We'll also just send an empty array or handle error from UI later, but right now we just want to know if it fails.
     });
 }
 

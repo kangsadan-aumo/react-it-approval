@@ -1,0 +1,72 @@
+mutation CreateDemoData @transaction @auth(level: USER, insecureReason: "This is seed data and should only be run by authenticated users.") {
+  user_insertMany(data: [
+    {
+      id: "70d1110b-8e12-429f-a892-259160d5b0c9",
+      createdAt: "2023-01-01T10:00:00Z",
+      displayName: "Alice Smith",
+      email: "alice@example.com",
+      photoUrl: "https://example.com/alice.jpg"
+    },
+    {
+      id: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      createdAt: "2023-01-02T11:00:00Z",
+      displayName: "Bob Johnson",
+      email: "bob@example.com",
+      photoUrl: "https://example.com/bob.jpg"
+    }
+  ])
+  category_insertMany(data: [
+    {
+      id: "c4f0d3e1-a2b3-4c5d-6e7f-8a9b0c1d2e3f",
+      userId: "70d1110b-8e12-429f-a892-259160d5b0c9",
+      createdAt: "2023-01-03T12:00:00Z",
+      name: "Work"
+    },
+    {
+      id: "f8e7d6c5-b4a3-2d1e-0c9b-8a7f6e5d4c3b",
+      userId: "70d1110b-8e12-429f-a892-259160d5b0c9",
+      createdAt: "2023-01-04T13:00:00Z",
+      name: "Personal"
+    }
+  ])
+  task_insertMany(data: [
+    {
+      id: "t1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+      userId: "70d1110b-8e12-429f-a892-259160d5b0c9",
+      categoryId: "c4f0d3e1-a2b3-4c5d-6e7f-8a9b0c1d2e3f",
+      createdAt: "2023-01-05T14:00:00Z",
+      description: "Complete the project report by Friday.",
+      dueDate: "2023-01-07",
+      isCompleted: false,
+      title: "Project Report"
+    },
+    {
+      id: "t7f8e9d0-c1b2-a3b4-c5d6-e7f8a9b0c1d2",
+      userId: "70d1110b-8e12-429f-a892-259160d5b0c9",
+      categoryId: "f8e7d6c5-b4a3-2d1e-0c9b-8a7f6e5d4c3b",
+      createdAt: "2023-01-06T15:00:00Z",
+      description: "Buy groceries for the week.",
+      dueDate: "2023-01-08",
+      isCompleted: true,
+      title: "Grocery Shopping"
+    },
+    {
+      id: "t3e4f5a6-b7c8-d9e0-f1a2-b3c4d5e6f7a8",
+      userId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      createdAt: "2023-01-07T16:00:00Z",
+      description: "Prepare presentation slides.",
+      dueDate: "2023-01-10",
+      isCompleted: false,
+      title: "Team Meeting Presentation"
+    }
+  ])
+  sharedTask_insertMany(data: [
+    {
+      id: "s1b2c3d4-e5f6-7890-1234-567890abcdef",
+      sharedWithUserId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      taskId: "t1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+      canEdit: true,
+      createdAt: "2023-01-06T14:30:00Z"
+    }
+  ])
+}

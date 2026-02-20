@@ -123,7 +123,8 @@ export default function RequestList() {
             resetForm();
             navigate(`/requests/${id}`);
         } catch (err) {
-            // ...
+            console.error('Submit Error:', err);
+            alert('เกิดข้อผิดพลาดในการสร้างคำขอ: ' + (err as Error).message);
         } finally {
             setSubmitting(false);
         }
@@ -149,7 +150,8 @@ export default function RequestList() {
             setShowRejectModal(false);
             setSelectedRequest(null);
         } catch (err) {
-            // ...
+            console.error('Status Change Error:', err);
+            alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ: ' + (err as Error).message);
         } finally {
             setActionLoading(false);
         }
@@ -163,7 +165,14 @@ export default function RequestList() {
 
     const handleFileUpload = async (file: File, type: 'quotation' | 'tax_invoice') => {
         if (!selectedRequest) return;
-        await uploadFile(file, selectedRequest.id, type);
+        try {
+            await uploadFile(file, selectedRequest.id, type);
+            // Request will be updated via onSnapshot, but we might need to close/reopen or it will sync on its own if we tied it correctly.
+            alert('อัปโหลดไฟล์สำเร็จ');
+        } catch (err) {
+            console.error('Upload Error:', err);
+            alert('เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + (err as Error).message);
+        }
     };
 
     // ---- Role-based action buttons ----

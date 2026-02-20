@@ -29,8 +29,7 @@ export default function LoginPage() {
             <div className="login-card">
                 <div className="login-header">
                     <span className="login-logo">🖥️</span>
-                    <h1 className="login-title">IT Procurement</h1>
-                    <p className="login-subtitle">ระบบขอซื้ออุปกรณ์ IT สำนักงาน</p>
+                    <h1 className="login-title">ระบบขออนุมัติซื้อ</h1>
                 </div>
                 <form onSubmit={handleSubmit} className="login-form">
                     {error && (
@@ -70,23 +69,6 @@ export default function LoginPage() {
                         )}
                     </button>
                 </form>
-                <div className="login-demo-info">
-                    <p className="login-demo-title">📌 บัญชีทดสอบ</p>
-                    <div className="login-demo-accounts">
-                        <div className="login-demo-account">
-                            <span className="login-demo-role">👤 ผู้ใช้งาน</span>
-                            <span>user / user123</span>
-                        </div>
-                        <div className="login-demo-account">
-                            <span className="login-demo-role">👔 ผู้อนุมัติ</span>
-                            <span>manager / manager123</span>
-                        </div>
-                        <div className="login-demo-account">
-                            <span className="login-demo-role">🛡️ แอดมิน</span>
-                            <span>admin / admin123</span>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

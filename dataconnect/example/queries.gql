@@ -1,0 +1,42 @@
+query ListAllUsers @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  users {
+    id
+    displayName
+    email
+    createdAt
+  }
+}
+
+mutation CreateNewTask($title: String!, $description: String, $dueDate: Date, $categoryId: UUID) @auth(level: USER) {
+  task_insert(data: {
+    title: $title,
+    description: $description,
+    dueDate: $dueDate,
+    userId_expr: "auth.uid",
+    categoryId: $categoryId,
+    isCompleted: false,
+    createdAt_expr: "request.time"
+  })
+}
+
+query GetMyTasks @auth(level: USER) {
+  tasks(where: { userId: { eq_expr: "auth.uid" } }, orderBy: [{ createdAt: DESC }]) {
+    id
+    title
+    description
+    dueDate
+    isCompleted
+    category {
+      id
+      name
+    }
+  }
+}
+
+mutation MarkTaskAsCompleted($taskId: UUID!) @auth(level: USER) {
+  task_update(
+    key: { id: $taskId },
+    data: { isCompleted: true }
+    where: { userId: { eq_expr: "auth.uid" } }
+  )
+}

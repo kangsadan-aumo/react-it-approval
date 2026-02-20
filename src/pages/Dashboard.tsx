@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
-    const { currentUser, hasRole } = useAuth();
+    const { currentUser } = useAuth();
     const { requests, loading } = useRequests(currentUser?.id, currentUser?.role);
 
     if (loading) {

@@ -166,7 +166,6 @@ export default function RequestList() {
         if (!selectedRequest) return;
         try {
             await uploadFile(file, selectedRequest.id, type);
-            // Request will be updated via onSnapshot
             alert('อัปโหลดไฟล์สำเร็จ');
         } catch (err) {
             console.error('Upload Error:', err);

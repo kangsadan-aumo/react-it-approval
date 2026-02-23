@@ -53,7 +53,6 @@ export default function LoginPage() {
                 <div className="login-header">
                     <span className="login-logo">🖥️</span>
                     <h1 className="login-title">ระบบขออนุมัติซื้อ</h1>
-                    {isForgotPassword && <p style={{ textAlign: 'center', marginTop: '10px' }}>รีเซ็ตรหัสผ่าน</p>}
                 </div>
 
                 {isForgotPassword ? (

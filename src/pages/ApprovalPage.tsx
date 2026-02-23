@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useRequests } from '../hooks/useRequests';
 import StatusBadge from '../components/StatusBadge';
-import { updateRequestStatus } from '../services/firebase';
+import { updateRequestStatus } from '../services/supabaseData';
 import { useState } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
+import SignatureModal from '../components/SignatureModal';
 
 export default function ApprovalPage() {
     const { currentUser } = useAuth();
@@ -12,6 +13,9 @@ export default function ApprovalPage() {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [rejectId, setRejectId] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
+
+    const [signatureId, setSignatureId] = useState<string | null>(null);
+    const [signaturePdfUrl, setSignaturePdfUrl] = useState<string | undefined>(undefined);
 
     const pendingRequests = requests.filter((r) => r.status === 'pending');
 
@@ -24,10 +28,14 @@ export default function ApprovalPage() {
         );
     }
 
-    const handleApprove = async (id: string) => {
-        setActionLoading(id);
+    const handleReject = async () => {
+        if (!rejectId) return;
+        setActionLoading(rejectId);
         try {
-            await updateRequestStatus(id, 'approved');
+            await updateRequestStatus(rejectId, 'rejected', rejectionReason);
+            setRejectId(null);
+            setRejectionReason('');
+            // force reload happens through snapshot normally
         } catch (err) {
             console.error(err);
             alert('เกิดข้อผิดพลาด');
@@ -36,18 +44,18 @@ export default function ApprovalPage() {
         }
     };
 
-    const handleReject = async () => {
-        if (!rejectId) return;
-        setActionLoading(rejectId);
+    const handleApproveSigned = async () => {
+        if (!signatureId) return;
+        setActionLoading(signatureId);
         try {
-            await updateRequestStatus(rejectId, 'rejected', rejectionReason);
-            setRejectId(null);
-            setRejectionReason('');
+            await updateRequestStatus(signatureId, 'approved');
         } catch (err) {
             console.error(err);
             alert('เกิดข้อผิดพลาด');
         } finally {
             setActionLoading(null);
+            setSignatureId(null);
+            setSignaturePdfUrl(undefined);
         }
     };
 
@@ -123,15 +131,22 @@ export default function ApprovalPage() {
                             <div className="card-footer">
                                 <button
                                     className="btn btn--success"
-                                    onClick={() => handleApprove(req.id)}
+                                    onClick={() => {
+                                        if (!req.quotationUrl) {
+                                            alert('กรุณารอเอกสารใบเสนอราคาก่อนเซ็นอนุมัติ');
+                                            return;
+                                        }
+                                        setSignatureId(req.id);
+                                        setSignaturePdfUrl(req.quotationUrl);
+                                    }}
                                     disabled={actionLoading === req.id}
                                 >
                                     {actionLoading === req.id ? (
                                         <span className="spinner spinner--sm" />
                                     ) : (
-                                        '✅'
+                                        '✍️'
                                     )}{' '}
-                                    อนุมัติ
+                                    เซ็นชื่ออนุมัติ
                                 </button>
                                 <button
                                     className="btn btn--danger"
@@ -183,6 +198,20 @@ export default function ApprovalPage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Signature Modal */}
+            {signatureId && (
+                <SignatureModal
+                    isOpen={!!signatureId}
+                    onClose={() => {
+                        setSignatureId(null);
+                        setSignaturePdfUrl(undefined);
+                    }}
+                    onSuccess={handleApproveSigned}
+                    requestId={signatureId}
+                    pdfUrl={signaturePdfUrl}
+                />
             )}
         </div>
     );

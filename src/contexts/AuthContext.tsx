@@ -1,141 +1,162 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { AppUser, UserRole } from '../types';
-
-const USERS_KEY = 'it_users';
-const CURRENT_USER_KEY = 'it_current_user';
-
-// Default admin user
-const DEFAULT_USERS: AppUser[] = [
-    {
-        id: 'admin_001',
-        username: 'admin',
-        password: 'admin123',
-        displayName: 'ผู้ดูแลระบบ',
-        department: 'IT',
-        email: 'admin@company.com', // 📧 แก้ไขอีเมลของผู้ดูแลระบบที่นี่
-        role: 'admin',
-        active: true,
-        createdAt: new Date().toISOString(),
-    },
-    {
-        id: 'approver_001',
-        username: 'manager',
-        password: 'manager123',
-        displayName: 'หัวหน้าแผนก IT',
-        department: 'IT',
-        email: 'manager@company.com', // 📧 แก้ไขอีเมลของหัวหน้า/ผู้อนุมัติที่นี่
-        role: 'approver',
-        active: true,
-        createdAt: new Date().toISOString(),
-    },
-    {
-        id: 'user_001',
-        username: 'user',
-        password: 'user123',
-        displayName: 'พนักงานทั่วไป',
-        department: 'IT',
-        email: 'user@company.com', // 📧 แก้ไขอีเมลของพนักงานที่นี่
-        role: 'user',
-        active: true,
-        createdAt: new Date().toISOString(),
-    },
-];
+import { supabase } from '../services/supabase';
 
 interface AuthContextType {
     currentUser: AppUser | null;
     users: AppUser[];
-    login: (username: string, password: string) => string | null; // returns error or null
-    logout: () => void;
-    addUser: (user: Omit<AppUser, 'id' | 'createdAt'>) => void;
-    updateUser: (id: string, data: Partial<AppUser>) => void;
-    deleteUser: (id: string) => void;
+    loading: boolean;
+    login: (username: string, password: string) => Promise<string | null>;
+    logout: () => Promise<void>;
+    addUser: (user: Omit<AppUser, 'id' | 'createdAt'>) => Promise<void>;
+    updateUser: (id: string, data: Partial<AppUser>) => Promise<void>;
+    deleteUser: (id: string) => Promise<void>;
+    resetPassword: (email: string) => Promise<string | null>;
     hasRole: (...roles: UserRole[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function getStoredUsers(): AppUser[] {
-    const raw = localStorage.getItem(USERS_KEY);
-    if (!raw) {
-        localStorage.setItem(USERS_KEY, JSON.stringify(DEFAULT_USERS));
-        return DEFAULT_USERS;
-    }
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return DEFAULT_USERS;
-    }
-}
-
-function getStoredCurrentUser(): AppUser | null {
-    const raw = localStorage.getItem(CURRENT_USER_KEY);
-    if (!raw) return null;
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return null;
-    }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [users, setUsers] = useState<AppUser[]>(getStoredUsers);
-    const [currentUser, setCurrentUser] = useState<AppUser | null>(getStoredCurrentUser);
+    const [users, setUsers] = useState<AppUser[]>([]);
+    const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }, [users]);
-
-    useEffect(() => {
-        if (currentUser) {
-            localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(currentUser));
-        } else {
-            localStorage.removeItem(CURRENT_USER_KEY);
-        }
-    }, [currentUser]);
-
-    const login = (username: string, password: string): string | null => {
-        const user = users.find((u) => u.username === username && u.password === password);
-        if (!user) return 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
-        if (!user.active) return 'บัญชีนี้ถูกระงับการใช้งาน';
-        setCurrentUser(user);
-        return null;
-    };
-
-    const logout = () => {
-        setCurrentUser(null);
-    };
-
-    const addUser = (userData: Omit<AppUser, 'id' | 'createdAt'>) => {
-        const exists = users.find((u) => u.username === userData.username);
-        if (exists) {
-            alert('ชื่อผู้ใช้นี้มีอยู่แล้ว');
+    const fetchUsers = async () => {
+        const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: true });
+        if (error) {
+            console.error('Error fetching users:', error);
             return;
         }
-        const newUser: AppUser = {
-            ...userData,
-            email: (userData as any).email || `${userData.username}@company.com`, // Fallback email
-            id: 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            createdAt: new Date().toISOString(),
-        };
-        setUsers((prev) => [...prev, newUser]);
+
+        const mappedUsers: AppUser[] = data.map(u => ({
+            id: u.id,
+            username: u.email.split('@')[0],
+            password: '***', // We don't store plain passwords
+            displayName: u.display_name || u.email,
+            department: u.department,
+            email: u.email,
+            role: u.role as UserRole,
+            active: true,
+            createdAt: u.created_at
+        }));
+        setUsers(mappedUsers);
     };
 
-    const updateUser = (id: string, data: Partial<AppUser>) => {
-        setUsers((prev) =>
-            prev.map((u) => (u.id === id ? { ...u, ...data } : u))
-        );
-        // Update currentUser if editing self
+    const fetchCurrentUser = async (userId: string) => {
+        const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+        if (error || !data) {
+            setCurrentUser(null);
+            return;
+        }
+
+        setCurrentUser({
+            id: data.id,
+            username: data.email.split('@')[0],
+            password: '***',
+            displayName: data.display_name || data.email,
+            department: data.department,
+            email: data.email,
+            role: data.role as UserRole,
+            active: true,
+            createdAt: data.created_at
+        });
+    };
+
+    useEffect(() => {
+        // Initial session check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+                fetchCurrentUser(session.user.id);
+            } else {
+                setCurrentUser(null);
+            }
+            setLoading(false);
+        });
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                fetchCurrentUser(session.user.id);
+            } else {
+                setCurrentUser(null);
+            }
+        });
+
+        // Fetch all users for Admin panel
+        fetchUsers();
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const login = async (email: string, password: string): Promise<string | null> => {
+        // To keep backwards compatibility with the UI expecting username, we can try appending the domain
+        const actualEmail = email.includes('@') ? email : `${email}@company.com`;
+
+        const { error } = await supabase.auth.signInWithPassword({
+            email: actualEmail,
+            password,
+        });
+
+        if (error) {
+            return error.message;
+        }
+        return null;
+    };
+
+    const logout = async () => {
+        await supabase.auth.signOut();
+    };
+
+    const addUser = async (_userData: Omit<AppUser, 'id' | 'createdAt'>) => {
+        alert('ในระบบ Supabase การสร้างผู้ใช้ใหม่ต้องทำผ่านหน้า Sign Up หรือหน้า Dashboard แทนครับ');
+    };
+
+    const updateUser = async (id: string, data: Partial<AppUser>) => {
+        const updatePayload: any = {};
+        if (data.displayName) updatePayload.display_name = data.displayName;
+        if (data.department) updatePayload.department = data.department;
+        if (data.role) updatePayload.role = data.role;
+
+        const { error } = await supabase.from('users').update(updatePayload).eq('id', id);
+        if (error) {
+            alert('Error updating user: ' + error.message);
+            return;
+        }
+
+        // Refresh lists
+        fetchUsers();
         if (currentUser?.id === id) {
-            setCurrentUser((prev) => prev ? { ...prev, ...data } : prev);
+            fetchCurrentUser(id);
         }
     };
 
-    const deleteUser = (id: string) => {
+    const deleteUser = async (id: string) => {
         if (id === currentUser?.id) {
             alert('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่');
             return;
         }
-        setUsers((prev) => prev.filter((u) => u.id !== id));
+
+        // You cannot delete users directly from client side without Admin privileges.
+        // Needs Supabase Edge Function to delete from auth.users.
+        alert('การลบผู้ใช้ต้องรันผ่าน Supabase Edge Functions / Admin API. ปัจจุบันจะทำได้แค่ลบออกจากตาราง users');
+        const { error } = await supabase.from('users').delete().eq('id', id);
+        if (error) {
+            alert('Error deleting user: ' + error.message);
+        } else {
+            fetchUsers();
+        }
+    };
+
+    const resetPassword = async (email: string): Promise<string | null> => {
+        const actualEmail = email.includes('@') ? email : `${email}@company.com`;
+        const { error } = await supabase.auth.resetPasswordForEmail(actualEmail, {
+            redirectTo: window.location.origin + '/update-password',
+        });
+        if (error) {
+            return error.message;
+        }
+        return null;
     };
 
     const hasRole = (...roles: UserRole[]): boolean => {
@@ -144,8 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ currentUser, users, login, logout, addUser, updateUser, deleteUser, hasRole }}>
-            {children}
+        <AuthContext.Provider value={{ currentUser, users, loading, login, logout, addUser, updateUser, deleteUser, resetPassword, hasRole }}>
+            {!loading && children}
         </AuthContext.Provider>
     );
 }

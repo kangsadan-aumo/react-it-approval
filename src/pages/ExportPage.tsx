@@ -57,9 +57,7 @@ function generateExcel(data: PurchaseRequest[], filename: string) {
         'มูลค่ารวม (บาท)',
         'สถานะ',
         'วันที่สร้าง',
-        'วันที่อนุมัติ',
-        'วันที่สั่งซื้อ',
-        'วันที่เสร็จสิ้น',
+        'วันที่อนุมัติ/เสร็จสิ้น',
         'หมายเหตุ',
     ];
 
@@ -89,8 +87,6 @@ function generateExcel(data: PurchaseRequest[], filename: string) {
             STATUS_CONFIG[r.status]?.label || r.status,
             formatDate(r.createdAt),
             r.approvedAt ? formatDate(r.approvedAt) : '-',
-            r.orderedAt ? formatDate(r.orderedAt) : '-',
-            r.completedAt ? formatDate(r.completedAt) : '-',
             r.rejectionReason || '-',
         ];
         csvContent += row.map((c) => `"${c}"`).join(',') + '\n';

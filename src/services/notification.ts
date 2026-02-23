@@ -40,10 +40,8 @@ export const NotificationService = {
 
         let statusText = status;
         switch (status) {
-            case 'approved': statusText = 'อนุมัติแล้ว ✅'; break;
+            case 'approved': statusText = 'อนุมัติ / เสร็จสิ้น ✅'; break;
             case 'rejected': statusText = 'ไม่อนุมัติ ❌'; break;
-            case 'ordered': statusText = 'สั่งซื้อแล้ว 📦'; break;
-            case 'completed': statusText = 'เสร็จสิ้น 🎉'; break;
             case 'cancelled': statusText = 'ยกเลิก 🚫'; break;
         }
 

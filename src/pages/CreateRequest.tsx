@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { RequestItem } from '../types';
-import { createRequest, uploadFile } from '../services/firebase';
+import { createRequest, uploadFile } from '../services/supabaseData';
 import { useAuth } from '../contexts/AuthContext';
 
 const emptyItem: RequestItem = { name: '', quantity: 1, estimatedPrice: 0, unit: 'ชิ้น' };

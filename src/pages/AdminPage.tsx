@@ -33,7 +33,7 @@ export default function AdminPage() {
 
     const openEditModal = (user: AppUser) => {
         setFormUsername(user.username);
-        setFormPassword(user.password); // Note: In real app, don't show password
+        setFormPassword(''); // Don't show existing password
         setFormDisplayName(user.displayName);
         setFormDepartment(user.department || '');
         setFormEmail(user.email || '');
@@ -42,9 +42,10 @@ export default function AdminPage() {
         setShowModal(true);
     };
 
-    const handleSaveUser = (e: React.FormEvent) => {
+    const handleSaveUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formUsername.trim() || !formPassword.trim() || !formDisplayName.trim()) {
+
+        if (!formUsername.trim() || !formDisplayName.trim() || (!editingUserId && !formPassword.trim())) {
             alert('กรุณากรอกข้อมูลให้ครบถ้วน');
             return;
         }
@@ -182,17 +183,21 @@ export default function AdminPage() {
                                             disabled={!!editingUserId} // Cannot change username when editing
                                         />
                                     </div>
-                                    <div className="form-group">
-                                        <label className="form-label">รหัสผ่าน <span className="required">*</span></label>
-                                        <input
-                                            type="text"
-                                            className="form-input"
-                                            placeholder="password"
-                                            value={formPassword}
-                                            onChange={(e) => setFormPassword(e.target.value)}
-                                            required
-                                        />
-                                    </div>
+
+                                    {!editingUserId && (
+                                        <div className="form-group">
+                                            <label className="form-label">รหัสผ่าน <span className="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                placeholder="password"
+                                                value={formPassword}
+                                                onChange={(e) => setFormPassword(e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                    )}
+
                                     <div className="form-group">
                                         <label className="form-label">ชื่อแสดง <span className="required">*</span></label>
                                         <input

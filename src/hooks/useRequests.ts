@@ -1,25 +1,39 @@
 
 import { useState, useEffect } from 'react';
 import type { PurchaseRequest } from '../types';
-import { subscribeToRequests, getRequestById, createRequest, updateRequestStatus, uploadFile } from '../services/firebase';
+import { getRequests, getRequestById, createRequest, updateRequestStatus, uploadFile } from '../services/supabaseData';
 
 export function useRequests(userId?: string, role?: string) {
     const [requests, setRequests] = useState<PurchaseRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
+    const fetchRequests = async () => {
         setLoading(true);
-        const unsubscribe = subscribeToRequests((data) => {
+        try {
+            const data = await getRequests(userId, role);
             setRequests(data);
-            setLoading(false);
             setError(null);
-        }, userId, role);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        return () => unsubscribe();
+    useEffect(() => {
+        fetchRequests();
+
+        // Polling every 10 seconds mapping real-time updates broadly.
+        // For a full realtime experience, we'd use supabase.channel('table-db-changes').on().subscribe()
+        const interval = setInterval(() => {
+            fetchRequests();
+        }, 10000);
+
+        return () => clearInterval(interval);
     }, [userId, role]);
 
-    return { requests, loading, error, createRequest, updateRequestStatus, uploadFile };
+    return { requests, loading, error, createRequest, updateRequestStatus, uploadFile, refetch: fetchRequests };
 }
 
 export function useRequest(id: string | undefined, userId?: string, role?: string) {

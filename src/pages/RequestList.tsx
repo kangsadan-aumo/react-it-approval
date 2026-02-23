@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRequests } from '../hooks/useRequests';
@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge';
 import FileUploader from '../components/FileUploader';
 import { STATUS_CONFIG } from '../types';
 import type { PurchaseRequest, RequestStatus, RequestItem } from '../types';
+import SignatureModal from '../components/SignatureModal';
 
 export default function RequestList() {
     const { currentUser, users } = useAuth();
@@ -23,6 +24,9 @@ export default function RequestList() {
     const [actionLoading, setActionLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    // Signature Modal State
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
+
     // Create Form State
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -36,9 +40,7 @@ export default function RequestList() {
     const statusFilters: { label: string; value: RequestStatus | 'all' }[] = [
         { label: 'ทั้งหมด', value: 'all' },
         { label: 'รอดำเนินการ', value: 'pending' },
-        { label: 'อนุมัติแล้ว', value: 'approved' },
-        { label: 'สั่งซื้อแล้ว', value: 'ordered' },
-        { label: 'เสร็จสิ้น', value: 'completed' },
+        { label: 'อนุมัติ / เสร็จสิ้น', value: 'approved' },
         { label: 'ยกเลิก', value: 'cancelled' },
         { label: 'ไม่อนุมัติ', value: 'rejected' },
     ];
@@ -50,7 +52,7 @@ export default function RequestList() {
     const canUploadFiles = selectedRequest && (
         (isUser && selectedRequest.createdBy === currentUser?.id) ||
         isAdmin
-    ) && (selectedRequest.status === 'ordered' || selectedRequest.status === 'completed' || selectedRequest.status === 'pending');
+    ) && (selectedRequest.status === 'pending');
 
     // Helper Functions
     const resetForm = () => {
@@ -95,7 +97,6 @@ export default function RequestList() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // ... (validation)
 
         setSubmitting(true);
         try {
@@ -112,8 +113,6 @@ export default function RequestList() {
             // Notify Approvers
             const approvers = users.filter(u => u.role === 'approver' || u.role === 'admin');
             const mockRequest = { ...input, id, requestNumber: 'PENDING', status: 'pending', totalAmount, createdAt: new Date(), updatedAt: new Date() } as PurchaseRequest;
-            // Note: In real app, we might want to fetch the real requestNumber, but for now this suffices or we can wait.
-            // Actually, let's just use the mockRequest for notification content.
             NotificationService.notifyRequestCreated(mockRequest, approvers);
 
             if (quotationFile) {
@@ -123,13 +122,12 @@ export default function RequestList() {
             resetForm();
             navigate(`/requests/${id}`);
         } catch (err) {
-            // ...
+            console.error('Submit Error:', err);
+            alert('เกิดข้อผิดพลาดในการสร้างคำขอ: ' + (err as Error).message);
         } finally {
             setSubmitting(false);
         }
     };
-
-    // ...
 
     const handleStatusChange = async (newStatus: RequestStatus, reason?: string) => {
         if (!selectedRequest) return;
@@ -147,9 +145,12 @@ export default function RequestList() {
 
             setSelectedRequest((prev) => prev ? { ...prev, status: newStatus, updatedAt: new Date() } : null);
             setShowRejectModal(false);
-            setSelectedRequest(null);
+            if (newStatus === 'cancelled') {
+                setSelectedRequest(null);
+            }
         } catch (err) {
-            // ...
+            console.error('Status Change Error:', err);
+            alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ: ' + (err as Error).message);
         } finally {
             setActionLoading(false);
         }
@@ -161,9 +162,16 @@ export default function RequestList() {
         await handleStatusChange('cancelled');
     };
 
-    const handleFileUpload = async (file: File, type: 'quotation' | 'tax_invoice') => {
+    const handleFileUpload = async (file: File, type: 'quotation' | 'signed_quotation') => {
         if (!selectedRequest) return;
-        await uploadFile(file, selectedRequest.id, type);
+        try {
+            await uploadFile(file, selectedRequest.id, type);
+            // Request will be updated via onSnapshot
+            alert('อัปโหลดไฟล์สำเร็จ');
+        } catch (err) {
+            console.error('Upload Error:', err);
+            alert('เกิดข้อผิดพลาดในการอัปโหลดไฟล์: ' + (err as Error).message);
+        }
     };
 
     // ---- Role-based action buttons ----
@@ -180,8 +188,14 @@ export default function RequestList() {
             }
             if (isApprover) {
                 actions.push(
-                    <button key="approve" className="btn" style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff' }} onClick={() => handleStatusChange('approved')} disabled={actionLoading}>
-                        {actionLoading ? <span className="spinner spinner--sm" /> : '✅'} อนุมัติ
+                    <button key="approve" className="btn" style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff' }} onClick={() => {
+                        if (!req.quotationUrl) {
+                            alert('กรุณารอผู้ใช้อัปโหลดใบเสนอราคาก่อนอนุมัติ');
+                            return;
+                        }
+                        setShowSignatureModal(true);
+                    }} disabled={actionLoading}>
+                        {actionLoading ? <span className="spinner spinner--sm" /> : '✍️'} เซ็นชื่ออนุมัติ
                     </button>,
                     <button key="reject" className="btn btn--danger" onClick={() => setShowRejectModal(true)} disabled={actionLoading}>
                         ❌ ไม่อนุมัติ
@@ -190,8 +204,14 @@ export default function RequestList() {
             }
             if (isAdmin) {
                 actions.push(
-                    <button key="approve" className="btn" style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff' }} onClick={() => handleStatusChange('approved')} disabled={actionLoading}>
-                        {actionLoading ? <span className="spinner spinner--sm" /> : '✅'} อนุมัติ
+                    <button key="approve" className="btn" style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff' }} onClick={() => {
+                        if (!req.quotationUrl) {
+                            alert('กรุณารอผู้ใช้อัปโหลดใบเสนอราคาก่อนอนุมัติ');
+                            return;
+                        }
+                        setShowSignatureModal(true);
+                    }} disabled={actionLoading}>
+                        {actionLoading ? <span className="spinner spinner--sm" /> : '✍️'} เซ็นชื่ออนุมัติ
                     </button>,
                     <button key="reject" className="btn btn--danger" onClick={() => setShowRejectModal(true)} disabled={actionLoading}>
                         ❌ ไม่อนุมัติ
@@ -201,36 +221,6 @@ export default function RequestList() {
                     </button>
                 );
             }
-        }
-
-        if (req.status === 'approved' && (isAdmin || isUser)) {
-            actions.push(
-                <button key="ordered" className="btn" style={{ backgroundColor: STATUS_CONFIG.ordered.color, color: '#fff' }} onClick={() => handleStatusChange('ordered')} disabled={actionLoading}>
-                    {actionLoading ? <span className="spinner spinner--sm" /> : '📦'} สั่งซื้อแล้ว
-                </button>
-            );
-        }
-
-        if (req.status === 'ordered' && (isAdmin || isUser)) {
-            // Require tax invoice before completing
-            const hasTaxInvoice = !!req.taxInvoiceUrl;
-            actions.push(
-                <button
-                    key="completed"
-                    className="btn"
-                    style={{ backgroundColor: hasTaxInvoice ? STATUS_CONFIG.completed.color : '#6b7280', color: '#fff' }}
-                    onClick={() => {
-                        if (!hasTaxInvoice) {
-                            alert('กรุณาอัปโหลดใบกำกับภาษีก่อนกดเสร็จสิ้น');
-                            return;
-                        }
-                        handleStatusChange('completed');
-                    }}
-                    disabled={actionLoading}
-                >
-                    {actionLoading ? <span className="spinner spinner--sm" /> : '🎉'} เสร็จสิ้น
-                </button>
-            );
         }
 
         return actions;
@@ -350,9 +340,9 @@ export default function RequestList() {
                                                         📄
                                                     </a>
                                                 )}
-                                                {req.taxInvoiceUrl && (
-                                                    <a href={req.taxInvoiceUrl} target="_blank" rel="noopener noreferrer" title="ใบกำกับภาษี">
-                                                        🧾
+                                                {req.signedQuotationUrl && (
+                                                    <a href={req.signedQuotationUrl} target="_blank" rel="noopener noreferrer" title="เอกสารอนุมัติ (เซ็นแล้ว)" style={{ marginLeft: 4 }}>
+                                                        ✅
                                                     </a>
                                                 )}
                                             </div>
@@ -411,7 +401,7 @@ export default function RequestList() {
                                                 <div className="timeline-dot" style={{ borderColor: selectedRequest.status === 'rejected' ? '#ef4444' : undefined }} />
                                                 <div className="timeline-content">
                                                     <span className="timeline-label">
-                                                        {selectedRequest.status === 'rejected' ? 'ไม่อนุมัติ' : 'อนุมัติ'}
+                                                        {selectedRequest.status === 'rejected' ? 'ไม่อนุมัติ' : 'อนุมัติ / เสร็จสิ้น'}
                                                     </span>
                                                     <span className="timeline-date">
                                                         {selectedRequest.approvedAt
@@ -419,24 +409,6 @@ export default function RequestList() {
                                                             : selectedRequest.status === 'rejected'
                                                                 ? new Date(selectedRequest.updatedAt).toLocaleDateString('th-TH')
                                                                 : '—'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className={`timeline-item ${selectedRequest.orderedAt ? 'timeline-item--done' : ''}`}>
-                                                <div className="timeline-dot" />
-                                                <div className="timeline-content">
-                                                    <span className="timeline-label">สั่งซื้อ</span>
-                                                    <span className="timeline-date">
-                                                        {selectedRequest.orderedAt ? new Date(selectedRequest.orderedAt).toLocaleDateString('th-TH') : '—'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className={`timeline-item ${selectedRequest.completedAt ? 'timeline-item--done' : ''}`}>
-                                                <div className="timeline-dot" />
-                                                <div className="timeline-content">
-                                                    <span className="timeline-label">เสร็จสิ้น</span>
-                                                    <span className="timeline-date">
-                                                        {selectedRequest.completedAt ? new Date(selectedRequest.completedAt).toLocaleDateString('th-TH') : '—'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -519,43 +491,53 @@ export default function RequestList() {
                                 </table>
                             </div>
 
-                            {/* เอกสาร — user/admin อัปโหลดได้ (lock เมื่ออัปโหลดแล้ว) */}
+                            {/* เอกสาร — user/admin อัปโหลดใบเสนอราคา (lock เมื่อไม่ได้เป็น pending) */}
                             {canUploadFiles && (
                                 <>
-                                    <h3 className="modal-section-title">📁 เอกสารแนบ</h3>
+                                    <h3 className="modal-section-title">📁 ใบเสนอราคา</h3>
                                     <div className="documents-grid">
                                         <FileUploader
                                             label="📄 ใบเสนอราคา (Quotation)"
                                             currentFileName={selectedRequest.quotationName}
                                             currentFileUrl={selectedRequest.quotationUrl}
                                             onUpload={(file) => handleFileUpload(file, 'quotation')}
-                                            locked={!!selectedRequest.quotationUrl}
-                                        />
-                                        <FileUploader
-                                            label="🧾 ใบกำกับภาษี (Tax Invoice)"
-                                            currentFileName={selectedRequest.taxInvoiceName}
-                                            currentFileUrl={selectedRequest.taxInvoiceUrl}
-                                            onUpload={(file) => handleFileUpload(file, 'tax_invoice')}
-                                            disabled={!['ordered', 'completed'].includes(selectedRequest.status)}
-                                            locked={!!selectedRequest.taxInvoiceUrl}
+                                            locked={selectedRequest.status !== 'pending'}
                                         />
                                     </div>
                                 </>
                             )}
 
-                            {/* เอกสาร — approver ดูอย่างเดียว */}
-                            {isApprover && (selectedRequest.quotationUrl || selectedRequest.taxInvoiceUrl) && (
+                            {/* เอกสารอนุมัติให้ดาวน์โหลด */}
+                            {selectedRequest.signedQuotationUrl && (
                                 <>
-                                    <h3 className="modal-section-title">📁 เอกสารแนบ</h3>
+                                    <h3 className="modal-section-title" style={{ color: STATUS_CONFIG.approved.color }}>✅ เอกสารอนุมัติ (E-Signature)</h3>
+                                    <div className="documents-grid">
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <strong>{selectedRequest.signedQuotationName || 'signed_quotation.pdf'}</strong>
+                                            <p className="text-muted">เอกสารใบเสนอราคาที่ได้รับการเซ็นอนุมัติแล้ว</p>
+                                            <a
+                                                href={selectedRequest.signedQuotationUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="btn btn--success"
+                                                style={{ alignSelf: 'flex-start' }}
+                                                download
+                                            >
+                                                ⬇️ ดาวน์โหลดเอกสารอนุมัติ
+                                            </a>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* เอกสาร — approver ดูอย่างเดียวระหว่างรอพิจารณา */}
+                            {isApprover && selectedRequest.status === 'pending' && selectedRequest.quotationUrl && (
+                                <>
+                                    <h3 className="modal-section-title">📁 เอกสารประกอบการพิจารณา</h3>
                                     <div className="documents-grid">
                                         {selectedRequest.quotationUrl && (
                                             <a href={selectedRequest.quotationUrl} target="_blank" rel="noopener noreferrer" className="btn btn--ghost">
-                                                📄 ดูใบเสนอราคา
-                                            </a>
-                                        )}
-                                        {selectedRequest.taxInvoiceUrl && (
-                                            <a href={selectedRequest.taxInvoiceUrl} target="_blank" rel="noopener noreferrer" className="btn btn--ghost">
-                                                🧾 ดูใบกำกับภาษี
+                                                📄 ดูใบเสนอราคาต้นฉบับ
                                             </a>
                                         )}
                                     </div>
@@ -607,6 +589,21 @@ export default function RequestList() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Signature Modal within RequestList */}
+            {showSignatureModal && selectedRequest && (
+                <SignatureModal
+                    isOpen={showSignatureModal}
+                    onClose={() => setShowSignatureModal(false)}
+                    pdfUrl={selectedRequest.quotationUrl}
+                    requestId={selectedRequest.id}
+                    onSuccess={async () => {
+                        await handleStatusChange('approved');
+                        setShowSignatureModal(false);
+                        setSelectedRequest(null);
+                    }}
+                />
             )}
 
             {/* ===== Create Request Modal ===== */}
@@ -783,14 +780,14 @@ export default function RequestList() {
                                 <button type="button" className="btn btn--ghost" onClick={closeCreateModal} disabled={submitting}>
                                     ยกเลิก
                                 </button>
-                                <button type="submit" className="btn btn--primary" disabled={submitting}>
+                                <button type="submit" className="btn btn--primary" disabled={submitting || !quotationFile}>
                                     {submitting ? (
                                         <>
                                             <span className="spinner spinner--sm" />
                                             กำลังส่ง...
                                         </>
                                     ) : (
-                                        '📨 ส่งคำขอซื้อ'
+                                        'ส่งคำขออนุมัติ'
                                     )}
                                 </button>
                             </div>

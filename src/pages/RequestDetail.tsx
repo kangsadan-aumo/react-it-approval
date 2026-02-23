@@ -2,11 +2,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useRequest } from '../hooks/useRequests';
 import StatusBadge from '../components/StatusBadge';
 import FileUploader from '../components/FileUploader';
-import { updateRequestStatus, uploadFile } from '../services/firebase';
+import { updateRequestStatus, uploadFile } from '../services/supabaseData';
 import type { RequestStatus } from '../types';
 import { STATUS_CONFIG } from '../types';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import SignatureModal from '../components/SignatureModal';
 
 export default function RequestDetail() {
     const { id } = useParams<{ id: string }>();
@@ -15,6 +16,7 @@ export default function RequestDetail() {
     const { request, loading, refetch } = useRequest(id, currentUser?.id, currentUser?.role);
     const [rejectionReason, setRejectionReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
 
     if (loading) {
@@ -70,7 +72,7 @@ export default function RequestDetail() {
         }
     };
 
-    const handleFileUpload = async (file: File, type: 'quotation' | 'tax_invoice') => {
+    const handleFileUpload = async (file: File, type: 'quotation' | 'signed_quotation') => {
         if (!id) return;
         await uploadFile(file, id, type);
         await refetch();
@@ -107,10 +109,16 @@ export default function RequestDetail() {
                         key="approved"
                         className="btn"
                         style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff' }}
-                        onClick={() => handleStatusChange('approved')}
+                        onClick={() => {
+                            if (!request.quotationUrl) {
+                                alert('กรุณารอผู้ใช้อัปโหลดใบเสนอราคาก่อนอนุมัติ');
+                                return;
+                            }
+                            setShowSignatureModal(true);
+                        }}
                         disabled={actionLoading}
                     >
-                        {actionLoading ? <span className="spinner spinner--sm" /> : '✅'} อนุมัติ
+                        {actionLoading ? <span className="spinner spinner--sm" /> : '✍️'} เซ็นชื่ออนุมัติ
                     </button>,
                     <button
                         key="rejected"
@@ -130,10 +138,16 @@ export default function RequestDetail() {
                         key="approved"
                         className="btn"
                         style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff' }}
-                        onClick={() => handleStatusChange('approved')}
+                        onClick={() => {
+                            if (!request.quotationUrl) {
+                                alert('กรุณารอผู้ใช้อัปโหลดใบเสนอราคาก่อนอนุมัติ');
+                                return;
+                            }
+                            setShowSignatureModal(true);
+                        }}
                         disabled={actionLoading}
                     >
-                        {actionLoading ? <span className="spinner spinner--sm" /> : '✅'} อนุมัติ
+                        {actionLoading ? <span className="spinner spinner--sm" /> : '✍️'} เซ็นชื่ออนุมัติ
                     </button>,
                     <button
                         key="rejected"
@@ -153,41 +167,6 @@ export default function RequestDetail() {
                     </button>
                 );
             }
-        }
-
-        if (request.status === 'approved' && (isAdmin || isUser)) {
-            actions.push(
-                <button
-                    key="ordered"
-                    className="btn"
-                    style={{ backgroundColor: STATUS_CONFIG.ordered.color, color: '#fff' }}
-                    onClick={() => handleStatusChange('ordered')}
-                    disabled={actionLoading}
-                >
-                    {actionLoading ? <span className="spinner spinner--sm" /> : '📦'} สั่งซื้อแล้ว
-                </button>
-            );
-        }
-
-        if (request.status === 'ordered' && (isAdmin || isUser)) {
-            const hasTaxInvoice = !!request.taxInvoiceUrl;
-            actions.push(
-                <button
-                    key="completed"
-                    className="btn"
-                    style={{ backgroundColor: hasTaxInvoice ? STATUS_CONFIG.completed.color : '#6b7280', color: '#fff' }}
-                    onClick={() => {
-                        if (!hasTaxInvoice) {
-                            alert('กรุณาอัปโหลดใบกำกับภาษีก่อนกดเสร็จสิ้น');
-                            return;
-                        }
-                        handleStatusChange('completed');
-                    }}
-                    disabled={actionLoading}
-                >
-                    {actionLoading ? <span className="spinner spinner--sm" /> : '🎉'} เสร็จสิ้น
-                </button>
-            );
         }
 
         return actions;
@@ -289,28 +268,10 @@ export default function RequestDetail() {
                                         <div className="timeline-dot" style={{ borderColor: request.status === 'rejected' ? '#ef4444' : undefined }} />
                                         <div className="timeline-content">
                                             <span className="timeline-label">
-                                                {request.status === 'rejected' ? 'ไม่อนุมัติ' : 'อนุมัติ'}
+                                                {request.status === 'rejected' ? 'ไม่อนุมัติ' : 'อนุมัติ / เสร็จสิ้น'}
                                             </span>
                                             <span className="timeline-date">
                                                 {request.approvedAt ? new Date(request.approvedAt).toLocaleDateString('th-TH') : (request.status === 'rejected' ? new Date(request.updatedAt).toLocaleDateString('th-TH') : '—')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className={`timeline-item ${request.orderedAt ? 'timeline-item--done' : ''}`}>
-                                        <div className="timeline-dot" />
-                                        <div className="timeline-content">
-                                            <span className="timeline-label">สั่งซื้อ</span>
-                                            <span className="timeline-date">
-                                                {request.orderedAt ? new Date(request.orderedAt).toLocaleDateString('th-TH') : '—'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className={`timeline-item ${request.completedAt ? 'timeline-item--done' : ''}`}>
-                                        <div className="timeline-dot" />
-                                        <div className="timeline-content">
-                                            <span className="timeline-label">เสร็จสิ้น</span>
-                                            <span className="timeline-date">
-                                                {request.completedAt ? new Date(request.completedAt).toLocaleDateString('th-TH') : '—'}
                                             </span>
                                         </div>
                                     </div>
@@ -367,11 +328,11 @@ export default function RequestDetail() {
                     </div>
                 </div>
 
-                {/* เอกสาร — ซ่อนจากผู้อนุมัติ */}
+                {/* เอกสาร — ผู้ใช้/แอดมิน อัปโหลดใบเสนอราคา */}
                 {canUploadFiles && (
                     <div className="card card--full">
                         <div className="card-header">
-                            <h2 className="card-title">📁 เอกสารแนบ</h2>
+                            <h2 className="card-title">📁 ใบเสนอราคา</h2>
                         </div>
                         <div className="card-body">
                             <div className="documents-grid">
@@ -380,40 +341,51 @@ export default function RequestDetail() {
                                     currentFileName={request.quotationName}
                                     currentFileUrl={request.quotationUrl}
                                     onUpload={(file) => handleFileUpload(file, 'quotation')}
-                                    locked={!!request.quotationUrl}
-                                />
-
-                                <FileUploader
-                                    label="🧾 ใบกำกับภาษี (Tax Invoice)"
-                                    currentFileName={request.taxInvoiceName}
-                                    currentFileUrl={request.taxInvoiceUrl}
-                                    onUpload={(file) => handleFileUpload(file, 'tax_invoice')}
-                                    disabled={!['ordered', 'completed'].includes(request.status)}
-                                    locked={!!request.taxInvoiceUrl}
+                                    locked={request.status !== 'pending'}
                                 />
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* เอกสาร — ผู้อนุมัติเห็นแค่ดูไฟล์ ไม่อัปโหลด */}
-                {isApprover && (request.quotationUrl || request.taxInvoiceUrl) && (
+                {/* แยกเอกสารใบเสนอราคาที่เซ็นแล้วออกมาให้โหลดได้ */}
+                {request.signedQuotationUrl && (
                     <div className="card card--full">
                         <div className="card-header">
-                            <h2 className="card-title">📁 เอกสารแนบ</h2>
+                            <h2 className="card-title" style={{ color: STATUS_CONFIG.approved.color }}>✅ เอกสารอนุมัติ (E-Signature)</h2>
                         </div>
                         <div className="card-body">
                             <div className="documents-grid">
-                                {request.quotationUrl && (
-                                    <a href={request.quotationUrl} target="_blank" rel="noopener noreferrer" className="btn btn--ghost">
-                                        📄 ดูใบเสนอราคา
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <strong>{request.signedQuotationName || 'signed_quotation.pdf'}</strong>
+                                    <p className="text-muted">เอกสารใบเสนอราคาที่ได้รับการเซ็นอนุมัติแล้ว</p>
+                                    <a
+                                        href={request.signedQuotationUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn--success"
+                                        style={{ alignSelf: 'flex-start' }}
+                                        download
+                                    >
+                                        ⬇️ ดาวน์โหลดเอกสารอนุมัติ
                                     </a>
-                                )}
-                                {request.taxInvoiceUrl && (
-                                    <a href={request.taxInvoiceUrl} target="_blank" rel="noopener noreferrer" className="btn btn--ghost">
-                                        🧾 ดูใบกำกับภาษี
-                                    </a>
-                                )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* เอกสาร — ผู้อนุมัติเห็นแค่ดูไฟล์ ไม่อัปโหลด (กรณีรอดำเนินการดูใบจดหมาย) */}
+                {isApprover && request.quotationUrl && request.status === 'pending' && (
+                    <div className="card card--full">
+                        <div className="card-header">
+                            <h2 className="card-title">📁 เอกสารประกอบการพิจารณา</h2>
+                        </div>
+                        <div className="card-body">
+                            <div className="documents-grid">
+                                <a href={request.quotationUrl} target="_blank" rel="noopener noreferrer" className="btn btn--ghost">
+                                    📄 ดูใบเสนอราคาต้นฉบับ
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -468,6 +440,20 @@ export default function RequestDetail() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Signature Modal */}
+            {showSignatureModal && id && (
+                <SignatureModal
+                    isOpen={showSignatureModal}
+                    onClose={() => setShowSignatureModal(false)}
+                    pdfUrl={request.quotationUrl}
+                    requestId={id}
+                    onSuccess={async () => {
+                        await handleStatusChange('approved');
+                        setShowSignatureModal(false);
+                    }}
+                />
             )}
         </div>
     );

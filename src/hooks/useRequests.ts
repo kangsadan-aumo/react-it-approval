@@ -8,8 +8,8 @@ export function useRequests(userId?: string, role?: string) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchRequests = async () => {
-        setLoading(true);
+    const fetchRequests = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         try {
             const data = await getRequests(userId, role);
             setRequests(data);
@@ -17,17 +17,16 @@ export function useRequests(userId?: string, role?: string) {
         } catch (err: any) {
             setError(err.message);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchRequests();
+        fetchRequests(false);
 
-        // Polling every 10 seconds mapping real-time updates broadly.
-        // For a full realtime experience, we'd use supabase.channel('table-db-changes').on().subscribe()
+        // Polling every 10 seconds for updates without triggering the global loading state
         const interval = setInterval(() => {
-            fetchRequests();
+            fetchRequests(true);
         }, 10000);
 
         return () => clearInterval(interval);

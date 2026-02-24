@@ -12,10 +12,6 @@ const ApprovalPage = lazy(() => import('./pages/ApprovalPage'));
 const ExportPage = lazy(() => import('./pages/ExportPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
-<<<<<<< HEAD
-const UpdatePasswordPage = lazy(() => import('./pages/UpdatePasswordPage'));
-=======
->>>>>>> 3cd2d05f34d1ab2896e829fdcce42652a831e0c6
 
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { currentUser, hasRole } = useAuth();

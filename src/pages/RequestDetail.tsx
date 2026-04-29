@@ -150,7 +150,7 @@ export default function RequestDetail() {
                     <button
                         key="approved"
                         className="btn"
-                        style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff' }}
+                        style={{ backgroundColor: STATUS_CONFIG.approved.color, color: '#fff', display: 'flex', alignItems: 'center', gap: '4px' }}
                         onClick={() => {
                             if (!request.quotationUrl) {
                                 alert('กรุณารอผู้ใช้อัปโหลดใบเสนอราคาก่อนอนุมัติ');
@@ -159,7 +159,6 @@ export default function RequestDetail() {
                             setShowSignatureModal(true);
                         }}
                         disabled={actionLoading}
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                         {actionLoading ? <span className="spinner spinner--sm" /> : <DrawIcon fontSize="small" />} เซ็นชื่ออนุมัติ
                     </button>,

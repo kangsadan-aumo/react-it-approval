@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ComputerIcon from '@mui/icons-material/Computer';
 import WarningIcon from '@mui/icons-material/Warning';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
@@ -67,7 +67,7 @@ export default function LoginPage() {
                         )}
                         {successMessage && (
                             <div style={{ padding: '0.75rem', backgroundColor: '#dcfce3', color: '#166534', borderRadius: '4px', marginBottom: '1rem', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <CheckCircleOutlineIcon fontSize="small" /> {successMessage}
+                                <CheckCircleIcon fontSize="small" /> {successMessage}
                             </div>
                         )}
                         <div className="form-group">

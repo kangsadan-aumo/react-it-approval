@@ -67,7 +67,7 @@ export default function Dashboard() {
                             style={{ borderLeftColor: config.color }}
                         >
                             <div className="dashboard-card-icon">
-                                {React.cloneElement(config.icon as React.ReactElement, { fontSize: 'large' })}
+                                {React.cloneElement(config.icon as React.ReactElement<any>, { fontSize: 'large' })}
                             </div>
                             <div className="dashboard-card-info">
                                 <span className="dashboard-card-value">{statusCounts[status] || 0}</span>

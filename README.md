@@ -1,45 +1,36 @@
-Purchase Approval System
-ระบบอนุมัติการสั่งซื้อ (Purchase Approval System) สำหรับจัดการคำขอซื้อภายในองค์กร 
-โดยรองรับการทำงานแบบหลายบทบาท (Role-based) และแสดงสถานะแบบเรียลไทม์
-
-Features
-Employee
+🧾 Purchase Approval System
+ระบบอนุมัติการสั่งซื้อสำหรับองค์กร รองรับการทำงานแบบหลายบทบาท (Role-based) และแสดงสถานะแบบเรียลไทม์
+🚀 Features
+👨‍💻 Employee
 สร้างคำขออนุมัติซื้อ (Purchase Request)
-กรอกข้อมูลรายการ เช่น ชื่อรายการ, จำนวนเงิน
+กรอกข้อมูลรายการ เช่น ชื่อสินค้า, จำนวนเงิน
 แนบไฟล์ใบเสนอราคา (PDF)
 ติดตามสถานะคำขอแบบเรียลไทม์
-
-Manager
-ตรวจสอบคำขออนุมัติจากพนักงาน
+👨‍💼 Manager
+ตรวจสอบคำขอจากพนักงาน
 อนุมัติ / ปฏิเสธคำขอ
-เซ็นเอกสารแบบ Digital Signature หลังการอนุมัติ
-
-Admin
-จัดการคำขออนุมัติทั้งหมดในระบบ
+เซ็นเอกสารด้วย Digital Signature
+👩‍💼 Admin
+จัดการคำขอทั้งหมดในระบบ
 อัปเดตสถานะคำขอ
 Export ข้อมูลเป็น Excel
-
-Workflow
-พนักงานสร้างคำขออนุมัติซื้อ พร้อมแนบเอกสาร (PDF)
+🔄 Workflow
+พนักงานสร้างคำขอ พร้อมแนบเอกสาร (PDF)
 ระบบส่งคำขอไปยังหัวหน้า (Manager)
 หัวหน้าทำการอนุมัติ / ปฏิเสธ
-หากอนุมัติ → ทำการเซ็นเอกสาร (Digital Signature)
-ผู้ใช้งานสามารถติดตามสถานะได้แบบเรียลไทม์
-
-Key Highlights
-รองรับการทำงานแบบ Role-based (Admin / Manager / Employee)
-มีระบบ Approval Workflow แบบลำดับขั้น
-รองรับ Real-time Status Tracking
-มีฟีเจอร์ Digital Signature
-Export ข้อมูลเป็น Excel ได้
-
-Tech Stack
-Frontend: React Mui
+หากอนุมัติ → เซ็นเอกสาร (Digital Signature)
+ผู้ใช้งานติดตามสถานะได้แบบเรียลไทม์
+✨ Key Highlights
+รองรับ Role-based System (Admin / Manager / Employee)
+มี Approval Workflow แบบลำดับขั้น
+แสดงสถานะแบบ Real-time Tracking
+รองรับ Digital Signature
+Export ข้อมูลเป็น Excel
+🛠️ Tech Stack
+Frontend: React, MUI
 Backend: Node.js
 Database: Supabase
-
-Notes
-ระบบนี้พัฒนาขึ้นเพื่อจำลองการใช้งานในองค์กร (Simulation Project)
-ออกแบบตาม Workflow การอนุมัติเอกสารจริง
-มุ่งเน้นการออกแบบระบบและประสบการณ์ผู้ใช้งาน (UI/UX) 
-รวมถึงโครงสร้างการทำงานแบบ Role-based
+📌 Notes
+ระบบนี้เป็น Simulation Project
+ออกแบบตาม Workflow การอนุมัติในองค์กรจริง
+มุ่งเน้นการออกแบบระบบและประสบการณ์ผู้ใช้งาน (UI/UX)
